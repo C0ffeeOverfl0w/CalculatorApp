@@ -1,4 +1,6 @@
-﻿namespace CalculatorApp.Model.Parsing;
+﻿using CalculatorApp.Model.Operations;
+
+namespace CalculatorApp.Model.Parsing;
 
 /// <summary>
 /// Класс для парсинга и вычисления математических выражений.
@@ -38,49 +40,32 @@ public class ExpressionParser
             }
             else if (c == '(')
             {
-                if (!string.IsNullOrEmpty(number))
-                {
-                    output.Enqueue(number);
-                    number = "";
-                }
+                if (!string.IsNullOrEmpty(number)) { output.Enqueue(number); number = ""; }
                 ops.Push(c);
             }
             else if (c == ')')
             {
-                if (!string.IsNullOrEmpty(number))
-                {
-                    output.Enqueue(number);
-                    number = "";
-                }
+                if (!string.IsNullOrEmpty(number)) { output.Enqueue(number); number = ""; }
                 while (ops.Count > 0 && ops.Peek() != '(')
                     output.Enqueue(ops.Pop().ToString());
-
                 if (ops.Count == 0 || ops.Pop() != '(')
                     throw new FormatException("Mismatched parentheses");
             }
             else
             {
-                if (!string.IsNullOrEmpty(number))
-                {
-                    output.Enqueue(number);
-                    number = "";
-                }
-
+                if (!string.IsNullOrEmpty(number)) { output.Enqueue(number); number = ""; }
                 while (ops.Count > 0 && Precedence(ops.Peek()) >= Precedence(c))
                     output.Enqueue(ops.Pop().ToString());
-
                 ops.Push(c);
             }
         }
 
-        if (!string.IsNullOrEmpty(number))
-            output.Enqueue(number);
+        if (!string.IsNullOrEmpty(number)) output.Enqueue(number);
 
         while (ops.Count > 0)
         {
             var op = ops.Pop();
-            if (op == '(' || op == ')')
-                throw new FormatException("Mismatched parentheses");
+            if (op == '(' || op == ')') throw new FormatException("Mismatched parentheses");
             output.Enqueue(op.ToString());
         }
 
@@ -105,16 +90,11 @@ public class ExpressionParser
             }
             else
             {
+                if (stack.Count < 2) throw new InvalidOperationException("Invalid expression format.");
                 var b = stack.Pop();
                 var a = stack.Pop();
-                stack.Push(token switch
-                {
-                    "+" => a + b,
-                    "-" => a - b,
-                    "*" => a * b,
-                    "/" => b == 0 ? throw new DivideByZeroException() : a / b,
-                    _ => throw new InvalidOperationException($"Неизвестный оператор {token}")
-                });
+                var strategy = OperationFactory.Get(token);
+                stack.Push(strategy.Execute(a, b));
             }
         }
 
